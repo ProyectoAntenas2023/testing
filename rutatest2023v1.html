@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ruta de Valparaíso a Santiago</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+</head>
+<body>
+    <div id="map" style="height: 500px;"></div>
+    <button id="exportButton" style="display: none;">Exportar a KMZ</button>
+
+    <script>
+        var map = L.map('map').setView([-33.4489, -70.6693], 8);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var waypoints = [
+            L.latLng(-33.0458, -71.6203),
+            L.latLng(-33.4489, -70.6693)
+        ];
+
+        var route = L.Routing.control({
+            waypoints: waypoints
+        }).addTo(map);
+
+        // Escucha el evento 'routesfound' para mostrar el botón de exportación
+        route.on('routesfound', function(e) {
+            var routeLine = e.routes[0].coordinates;
+            document.getElementById("exportButton").style.display = "block";
+
+            // Función para exportar la ruta a KMZ usando mygeodata.cloud
+            function exportToKMZ() {
+                var routeGeoJSON = route.getPlan().toGeoJSON();
+                var kmzData = {
+                    type: "FeatureCollection",
+                    features: [
+                        routeGeoJSON
+                    ]
+                };
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "https://mygeodata.cloud/converter/convert", true);
+                xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        var kmzLink = response.output[0].uri;
+                        window.location = kmzLink;
+                    }
+                };
+                xhr.send(JSON.stringify({
+                    options: "KMZ",
+                    input: "GeoJSON",
+                    data: kmzData
+                }));
+            }
+
+            document.getElementById("exportButton").addEventListener("click", exportToKMZ);
+        });
+    </script>
+</body>
+</html>
+
+
